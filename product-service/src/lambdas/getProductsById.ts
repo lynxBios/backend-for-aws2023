@@ -1,4 +1,4 @@
-import { APIGatewayEent } from 'aws-lambda';
+import { APIGatewayEvent } from 'aws-lambda';
 import { products } from './mocks';
 import { buildResponse } from './utils';
 

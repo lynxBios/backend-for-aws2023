@@ -1,0 +1,28 @@
+openapi: 3.0.0
+info:
+  version: '1.0'
+  title: My API
+  description: My API Description
+  license:
+    name: MIT
+paths:
+  /products:
+    get:
+      responses:
+        '200':
+          description: Success
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        payloadFormatVersion: 1.0
+        type: aws_proxy
+        uri: arn:aws:apigateway:eu-central-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-central-1:123456789012:function:GetProductsListLambda/invocations
+  /products/{productId}:
+    get:
+      responses:
+        '200':
+          description: Success
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        payloadFormatVersion: 1.0
+        type: aws_proxy
+        uri: arn:aws:apigateway:eu-central-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-central-1:123456789012:function:GetProductsByIdLambda/invocations

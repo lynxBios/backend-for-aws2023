@@ -1,46 +1,57 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import * as apiGateway from 'aws-cdk-lib/aws-apigatewayv2';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import dotenv from 'dotenv';
-//import { ProductServiceStack } from '../lib/product-service-stack';
+import * as apiGateway from '@aws-cdk/aws-apigatewayv2-alpha';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 
-dotenv.config();
+
+const BASE_URL = 'products';
+const REGION = 'eu-central-1';
 
 const app = new cdk.App();
 
-const stack = new cdk.ProductServiceStack(app, id: 'ProductServiceStack', props: {
-  
-  env: { region: 'eu-central-1' },
+const stack = new cdk.Stack(app, 'ProductsServiceStack', { env: { region: REGION } });
 
-});
-
-const sharedLambdaProps: NodejsFunctionProps = {  
+const createLambda = (name: string, props: NodejsFunctionProps ) => new NodejsFunction(stack, name, {
   runtime: lambda.Runtime.NODEJS_18_X,
   environment: {
-    PRODUCT_AWS_REGION: process.env.PRODUCT_AWS_REGION!,
-  }  
-};
+    PRODUCT_AWS_REGION: REGION,
+  },
+  ...props,
+})
 
-const getProductsList = new NodejsFunction(stack, id: 'GetProductsList', props: {
-  ...sharedLambdaProps,
-  functionName: 'GetProductsList',
+const getProductsList = createLambda('GetProductsListLambda', {
   entry: 'src/lambdas/getProductsList.ts',
+  functionName: 'getProductsList',
 });
 
-const api = new apiGateway.HttpApi(stack, id: 'GetProductsListApi', props: {
+const getProductsById = createLambda('GetProductsByIdLambda', {
+  entry: 'src/lambdas/getProductsById.ts',
+  functionName: 'getProductsById',
+});
+
+const api = new apiGateway.HttpApi(stack, 'ProductsApiGateway', {
   corsPreflight: {
-    allowHeaders: ['*'],
+    allowHeaders: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowMethods: [apiGateway.CorsHttpMethod.ANY],
     allowOrigins: ['*'],
   },
 });
 
-api.addRoutes( options: {
-  path: '/products',
+api.addRoutes({
+  path: `/${BASE_URL}`,
   methods: [apiGateway.HttpMethod.GET],
-  integration: new HttpLambdaIntegration(id: 'GetProductsListIntegration', getProductsList),
+  integration: new HttpLambdaIntegration('GetProductsListLambdaIntegration', getProductsList)
+});
+
+api.addRoutes({
+  path: `/${BASE_URL}/{productId}`,
+  methods: [apiGateway.HttpMethod.GET],
+  integration: new HttpLambdaIntegration('GetProductsByIdIntegration', getProductsById),
+});
+
+new cdk.CfnOutput(stack, 'ApiGatewayUrl', {
+  value: api.url || '',
 });
