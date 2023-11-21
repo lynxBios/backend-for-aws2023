@@ -2,15 +2,20 @@ openapi: 3.0.0
 info:
   version: '1.0'
   title: My API
-  description: My API Description
+  description: This is the Products API
   license:
     name: MIT
 paths:
   /products:
-    get:
+    get: 
+      tags:
+        - product
+      summary: Products List.
+      description: Get list of Products.
+      operationId: getProducts
       responses:
         '200':
-          description: Success
+          $ref: '#/components/responses/Products'
       x-amazon-apigateway-integration:
         httpMethod: POST
         payloadFormatVersion: 1.0
@@ -18,11 +23,58 @@ paths:
         uri: arn:aws:apigateway:eu-central-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-central-1:123456789012:function:GetProductsListLambda/invocations
   /products/{productId}:
     get:
+      tags:
+        - product
+      summary: Get product.
+      description: Get a product.
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/productId'
       responses:
         '200':
-          description: Success
+          $ref: '#/components/responses/Product'
       x-amazon-apigateway-integration:
         httpMethod: POST
         payloadFormatVersion: 1.0
         type: aws_proxy
         uri: arn:aws:apigateway:eu-central-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-central-1:123456789012:function:GetProductsByIdLambda/invocations
+        components:
+  parameters:
+    productId:
+      in: path
+      name: productId
+      required: true
+      schema:
+        type: string
+  responses:
+    Products:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Product'
+    Product:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Product'
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+      required:
+        - id
+        - title
+        - description
+        - price
