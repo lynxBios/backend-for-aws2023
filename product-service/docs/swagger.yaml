@@ -38,7 +38,7 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
+            format: id
       responses:
         "200":
           description: Successful operation
