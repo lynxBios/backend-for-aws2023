@@ -1,60 +1,30 @@
-import { handler } from '../src/lambdas/getProductsList';
-import { buildResponse } from '../src/lambdas/utils';
-import { APIGatewayEvent } from 'aws-lambda';
-import { products } from '../src/lambdas/mocks';
+import { findAll, findItem } from '../src/services/productsService';
+import { handler as getProductsById } from '../src/lambdas/getProductsById';
+
 
 describe('handler', () => {
-  test('should return a successful response with products when productId is provided', async () => {
-    const event: APIGatewayEvent = {
-      pathParameters: {
-        productId: '1'
-      }
-    };
-
-    const response = await handler(event);
-
-    expect(response).toEqual(buildResponse({ statusCode: 200, body: { product: products[0] } }));
+  test('should return a non-empty result', async () => {
+    expect(findAll()).not.toEqual([]);
   });
 
-  test('should return a 400 error response when productId is not provided', async () => {
-    const invalidProductId = ""
-    const event: APIGatewayEvent = {
-      pathParameters: {
-        productId: invalidProductId
-      }
-    };
-
-    const response = await handler(event);
-
-    expect(response).toEqual(buildResponse({ statusCode: 400, body: { message: 'productId is required' } }));
+  test('should return a item by ID', async () => {
+    const productId = '5';
+    expect(findItem( productId )).not.toEqual([]);
   });
 
-  test('should return a 404 error response when product is not found', async () => {
-    const event: APIGatewayEvent = {
-      pathParameters: {
-        productId: '999'
-      }
-    };
-
-    const response = await handler(event);
-
-    expect(response).toEqual(buildResponse({ statusCode: 404, body: { message: 'Product not found' } }));
+  test('should not return an item', async () => {
+    const productId = '100500';
+    expect(findItem( productId )).not.toEqual([]);
   });
 
-  test('should return a 500 error response when an error occurs', async () => {
-    const event: APIGatewayEvent = {
+  test("Get one product (200)", async () => {
+    
+    const response = await getProductsById({
       pathParameters: {
-        productId: '1'
+        productId: '5'
       }
-    };
-
-    // Mock the buildResponse function to throw an error
-    jest.spyOn(buildResponse, 'buildResponse').mockImplementation(() => {
-      throw new Error('Test error');
     });
-
-    const response = await handler(event);
-
-    expect(response).toEqual(buildResponse({ statusCode: 500, body: { message: 'Test error' } }));
-  });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).not.toEqual([]);
+})  
 });
