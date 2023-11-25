@@ -1,12 +1,10 @@
 import { buildResponse } from "./utils";
-import { APIGatewayEvent } from "aws-lambda";
-import { products } from "./mocks";
+//import { APIGatewayEvent } from "aws-lambda";
+import { findAll } from "../services/productsService";
 
-export const handler = async (event: APIGatewayEvent) => {
+export const handler = async () => {
   try {
-    //console.log("Event fom Get Products List Lambda: ", event)
-
-    return buildResponse({ statusCode: 200, body: products });
+    return buildResponse({ statusCode: 200, body: findAll() });
   } catch (error: any) {
     return buildResponse({ statusCode: 500, body: { message: error.message || "" }});
   }
