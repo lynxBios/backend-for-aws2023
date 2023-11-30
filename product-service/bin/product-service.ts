@@ -32,6 +32,11 @@ const getProductsById = createLambda('GetProductsByIdLambda', {
   functionName: 'getProductsById',
 });
 
+const createProduct = createLambda('CreateProductLambda', {
+  entry: 'src/lambdas/createProduct.ts',
+  functionName: 'createProduct',  
+});
+
 const api = new apiGateway.HttpApi(stack, 'ProductsApiGateway', {
   corsPreflight: {
     allowHeaders: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -50,6 +55,12 @@ api.addRoutes({
   path: `/${BASE_URL}/{productId}`,
   methods: [apiGateway.HttpMethod.GET],
   integration: new HttpLambdaIntegration('GetProductsByIdIntegration', getProductsById),
+});
+
+api.addRoutes({
+  path: `/${BASE_URL}`,
+  methods: [apiGateway.HttpMethod.POST],
+  integration: new HttpLambdaIntegration('CreateProductLambdaIntegration', createProduct),
 });
 
 new cdk.CfnOutput(stack, 'ApiGatewayUrl', {
