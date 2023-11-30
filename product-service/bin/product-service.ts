@@ -6,9 +6,10 @@ import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-al
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 
-
 const BASE_URL = 'products';
 const REGION = 'eu-central-1';
+const PRODUCTS_TABLE_NAME = 'products';
+const STOCKS_TABLE_NAME = 'stocks';
 
 const app = new cdk.App();
 
@@ -18,9 +19,11 @@ const createLambda = (name: string, props: NodejsFunctionProps ) => new NodejsFu
   runtime: lambda.Runtime.NODEJS_18_X,
   environment: {
     PRODUCT_AWS_REGION: REGION,
+    PRODUCTS_TABLE_NAME,
+    STOCKS_TABLE_NAME,    
   },
   ...props,
-})
+});
 
 const getProductsList = createLambda('GetProductsListLambda', {
   entry: 'src/lambdas/getProductsList.ts',

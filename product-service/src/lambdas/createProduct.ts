@@ -3,12 +3,22 @@ import { DynamoDB } from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import { buildResponse } from './utils';
 
-const dynamoDb = new DynamoDB.DocumentClient();
+export const dynamoDb = new DynamoDB.DocumentClient();
+const stocksDynamoDb = new DynamoDB.DocumentClient();
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
     console.log('event', event);
+
+    if (!event.body) {
+      return buildResponse({ statusCode: 400, body: { message: 'Bad request, you are missing the parameter body' } });
+    }
+
     const { title, description, price } = JSON.parse(event.body || '');
+
+    if (typeof title !== 'string' || typeof description !== 'string' || typeof price !== 'number' || price <= 0) {
+      return buildResponse({ statusCode: 400, body: { message: 'Invalid request data' } });
+    }
     
     const params: DynamoDB.DocumentClient.PutItemInput = {
       TableName: 'products',
@@ -20,16 +30,26 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       },
     };
 
+    const { count } = JSON.parse(event.body || '');
+    const productResponse = await dynamoDb.put(params).promise();
+    const productId = productResponse.Attributes?.id;
+
+    const stocksParams: DynamoDB.DocumentClient.PutItemInput = {
+      TableName: 'stocks',
+      Item: {
+        product_id: productId,
+        count,
+      },
+    };
+
     await dynamoDb.put(params).promise();
+    await stocksDynamoDb.put(stocksParams).promise();
 
     return {
       statusCode: 201,
       body: JSON.stringify({ message: 'Product created successfully' }),
     };
-  } catch (error: any) {
-    if (!event.body) {
-      return buildResponse({ statusCode: 400, body: { message: 'Bad request, you are missing the parameter body' } });
-    }
+  } catch (error: any) {    
     return buildResponse({ statusCode: 500, body: { message: error.message || 'Internal server error' } });
   }
 };
