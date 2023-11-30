@@ -7,8 +7,10 @@ const handler = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
   try {
+    console.log('event', event);
     const { productId } = event.pathParameters || {};     
     if (!productId) {
+      console.log('no productId');
       return buildResponse({ statusCode: 400, body: { message: 'productId is required' } });
     }
     const params = {
@@ -20,6 +22,7 @@ const handler = async (
     const command = new GetItemCommand(params);
     const { Item } = await client.send(command) as { Item: any };
     if (!Item) {
+      console.log('Product not found');
       return buildResponse({ statusCode: 404, body: { message: 'Product not found' } });
     }
     return buildResponse({ statusCode: 200, body: Item });
