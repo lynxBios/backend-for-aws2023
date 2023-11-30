@@ -42,7 +42,7 @@ const createProduct = createLambda('CreateProductLambda', {
 
 const api = new apiGateway.HttpApi(stack, 'ProductsApiGateway', {
   corsPreflight: {
-    allowHeaders: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowHeaders: ['*'],
     allowMethods: [apiGateway.CorsHttpMethod.ANY],
     allowOrigins: ['*'],
   },
