@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import { buildResponse } from './utils';
 
 const dynamoDb = new DynamoDB.DocumentClient();
 
@@ -26,9 +27,9 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
       body: JSON.stringify({ message: 'Product created successfully' }),
     };
   } catch (error: any) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: error.message || 'Internal server error' }),
-    };
+    if (!event.body) {
+      return buildResponse({ statusCode: 400, body: { message: 'Bad request, you are missing the parameter body' } });
+    }
+    return buildResponse({ statusCode: 500, body: { message: error.message || 'Internal server error' } });
   }
 };
