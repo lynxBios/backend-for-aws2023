@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { buildResponse } from './utils';
 
 export const dynamoDb = new DynamoDB.DocumentClient();
-const stocksDynamoDb = new DynamoDB.DocumentClient();
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   try {
@@ -15,41 +14,46 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     }
 
     const { title, description, price } = JSON.parse(event.body || '');
+    const { count } = JSON.parse(event.body || '');
 
     if (typeof title !== 'string' || typeof description !== 'string' || typeof price !== 'number' || price <= 0) {
       return buildResponse({ statusCode: 400, body: { message: 'Invalid request data' } });
     }
-    
-    const params: DynamoDB.DocumentClient.PutItemInput = {
-      TableName: 'products',
-      Item: {
-        id: uuidv4(),
-        title,
-        description,
-        price,
-      },
+
+    const productId = uuidv4();
+
+    const params: DynamoDB.DocumentClient.TransactWriteItemsInput = {
+      TransactItems: [
+        {
+          Put: {
+            TableName: 'products',
+            Item: {
+              id: productId,
+              title,
+              description,
+              price,
+            },
+          },
+        },
+        {
+          Put: {
+            TableName: 'stocks',
+            Item: {
+              product_id: productId,
+              count,
+            },
+          },
+        },
+      ],
     };
 
-    const { count } = JSON.parse(event.body || '');
-    const productResponse = await dynamoDb.put(params).promise();
-    const productId = productResponse.Attributes?.id;
-
-    const stocksParams: DynamoDB.DocumentClient.PutItemInput = {
-      TableName: 'stocks',
-      Item: {
-        product_id: productId,
-        count,
-      },
-    };
-
-    await dynamoDb.put(params).promise();
-    await stocksDynamoDb.put(stocksParams).promise();
+    await dynamoDb.transactWrite(params).promise();
 
     return {
       statusCode: 201,
       body: JSON.stringify({ message: 'Product created successfully' }),
     };
-  } catch (error: any) {    
+  } catch (error: any) {
     return buildResponse({ statusCode: 500, body: { message: error.message || 'Internal server error' } });
   }
 };
