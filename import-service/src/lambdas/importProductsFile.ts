@@ -1,28 +1,44 @@
-import * as AWS from 'aws-sdk';
+import * as Joi from 'joi';
+import { buildResponse } from '../utils/response';
+import { ImportFolders } from '../utils/const';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { createSignedURL } from "../utils/createSignedURL";
 
-export const importProductsFile = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+const ImportUrl = Joi.object({
+  name: Joi.string().required(),
+});
+
+const bucketName = 'bucket-for-task5';
+
+export const handler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
   try {
-    // Get the name parameter from the query string
-    const fileName = event.queryStringParameters?.fileName;
+    console.log('ImportProductsFile event:', event);
 
-    // Create a new Signed URL with the key 'uploaded/${name}'
-    const s3 = new AWS.S3();
-    const signedUrl = await s3.getSignedUrlPromise('putObject', {
-      Bucket: 'bucket-for-task5',
-      Key: `uploaded/${fileName}`,
-      Expires: 60, 
-    });
-    
-    return {
-      statusCode: 200,
-      body: signedUrl,
-    };
-  } catch (error) {    
-    console.error(error);
-    return {
-      statusCode: 500,
-      body: 'Internal Server Error',
-    };
+    const { value, error } = ImportUrl.validate(
+      event.queryStringParameters || {}
+    );
+
+    if (error != null) {
+      console.log('Validation error:', error.message);
+      return buildResponse({ statusCode: 400, body: { message: error.message || "" }});
+    }
+
+    const { name: fileName } = value;
+
+    if (!fileName.toLowerCase().endsWith('.csv')) {
+      return buildResponse({ statusCode: 400, body: { message: 'CSV files required' }});
+    }
+
+    const objectKey = `${ImportFolders.UPLOADED}${fileName}`;
+    const url = await createSignedURL(bucketName, objectKey);
+
+    console.log('Created S3 upload URL:', url);
+    return buildResponse({ statusCode: 200, body: { message: url } });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.log('An error occurred:', error.message);
+    return buildResponse({ statusCode: 500, body: { message: error.message || "" }});
   }
 };
