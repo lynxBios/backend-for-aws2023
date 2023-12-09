@@ -1,4 +1,3 @@
-import * as csv from "csv-parser";
 import { S3Client } from '@aws-sdk/client-s3';
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
@@ -7,6 +6,8 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+
+import csv = require("csv-parser");
 
 const s3Client = new S3Client({ region: 'eu-central-1'});
 
