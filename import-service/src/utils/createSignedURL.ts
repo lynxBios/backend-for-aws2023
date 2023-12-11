@@ -21,6 +21,7 @@ export const createSignedURL = async (
   const signedURL = await getSignedUrl(s3Client, putCommand, {
     expiresIn: 60,
   });
+  
   return signedURL;
 };
 

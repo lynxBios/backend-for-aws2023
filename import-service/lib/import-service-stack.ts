@@ -13,8 +13,7 @@ export class ImportServiceStack extends cdk.Stack {
 
     const importProductsFileLambda = new NodejsFunction(this, 'importProductsFileLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: './src/lambdas/importProductsFile.ts',
-      handler: 'importProductsFile',
+      entry: './src/lambdas/importProductsFile.ts',      
       environment: {
         BUCKET_NAME: 'bucket-for-task5',
         REGION: 'eu-central-1',
@@ -23,8 +22,7 @@ export class ImportServiceStack extends cdk.Stack {
 
     const importFileParserLambda = new NodejsFunction(this, 'importFileParserLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: './src/lambdas/importFileParser.ts',
-      handler: 'importFileParser',
+      entry: './src/lambdas/importFileParser.ts',      
       environment: {
         BUCKET_NAME: 'bucket-for-task5',
         REGION: 'eu-central-1',
@@ -47,7 +45,7 @@ export class ImportServiceStack extends cdk.Stack {
           allowedOrigins: ['*'],
         },
       ],
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      //blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 

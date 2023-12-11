@@ -4,7 +4,7 @@ export const buildResponse = ({
   headers,
 }: {
   statusCode: number;
-  body: object;
+  body: object | string;
   headers?: object;
 }) => {
   return {
