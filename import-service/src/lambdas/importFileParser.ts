@@ -1,6 +1,10 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
+import { SQSClient,
+  SendMessageCommand,
+  SendMessageCommandOutput,
+} from '@aws-sdk/client-sqs';
 import {
   GetObjectCommand,
   CopyObjectCommand,
