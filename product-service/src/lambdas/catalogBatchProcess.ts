@@ -5,18 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const saveItem = async (data: any) => {
   try {
-    const client = new DynamoDBClient();
-    const dynamo = DynamoDBDocumentClient.from(client);
-
-    const productsTableName = 'products';
-    const stocksTableName = 'stock';
-
+    const dynamoClient = new DynamoDBClient();
+    const dynamoDB = DynamoDBDocumentClient.from(dynamoClient);
     const productId = uuidv4();
-    const { description, title, price, count } = data;
+    const { title, description, price, count } = data;
 
     const transactionItems = [{
       Put: {
-        TableName: productsTableName,
+        TableName: 'products',
         Item: {
           productId,
           description,
@@ -27,7 +23,7 @@ export const saveItem = async (data: any) => {
     },
     {
       Put: {
-        TableName: stocksTableName,
+        TableName: 'stocks',
         Item: {
           product_id: productId,
           count
@@ -35,7 +31,7 @@ export const saveItem = async (data: any) => {
       }
     }];
 
-    await dynamo.send(
+    await dynamoDB.send(
       new TransactWriteCommand({ TransactItems: transactionItems })
     );
   } catch(e) {
@@ -56,7 +52,7 @@ export const sendEmail = async (products: any) => {
 
   const totalCount = calculateTotalCount(products);
 
-  const sns = new SNS();
+  const snsClient = new SNS();
   const paramsSNS= {
     Message: `New objects uploaded: ${JSON.stringify(products)}`,
     Subject: 'Subject',
@@ -70,7 +66,7 @@ export const sendEmail = async (products: any) => {
   }
 
   try {
-    await sns.publish(paramsSNS);
+    await snsClient.publish(paramsSNS);
     console.log('Successfully published to sns');
   } catch (error) {
     console.error('Error publishing to sns:', error);
