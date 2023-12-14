@@ -1,10 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
-import { SQSClient,
-  SendMessageCommand,
-  SendMessageCommandOutput,
-} from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import {
   GetObjectCommand,
   CopyObjectCommand,
@@ -13,7 +10,8 @@ import {
 
 import csv = require("csv-parser");
 
-const s3Client = new S3Client({ region: 'eu-central-1'});
+const s3Client = new S3Client({ region: 'eu-central-1' });
+const sqsClient = new SQSClient({ region: 'eu-central-1' });
 
 const move = async ({ bucket, from, to, }: {
   bucket: string;
@@ -54,7 +52,15 @@ export const handler = async (event: S3Event) => {
     await new Promise<void>((resolve, reject) => {
       (stream as Readable)
         .pipe(csv())
-        .on('data', (data: any) => console.log(data))
+        .on('data', async (data: any) => {
+          await sqsClient.send(
+            new SendMessageCommand({
+              QueueUrl: process.env.QUEUE_URL,
+              MessageBody: JSON.stringify(data),
+            })
+          );
+        })
+        
         .on("end", async () => {
           await move({
             from: fileName,
@@ -64,6 +70,7 @@ export const handler = async (event: S3Event) => {
           console.log("file moved");
           resolve();
         })
+
         .on("error", (error: any) => {
           reject(error);
         });
