@@ -33,7 +33,7 @@ export class ProductServiceStack extends cdk.Stack {
         CREATE_PRODUCT_TOPIC_ARN: 'arn:aws:sns:eu-central-1:730043614514:create-product-topic',
         REGION: 'eu-central-1',
         PRODUCTS_TABLE_NAME: 'products',
-        STOCKS_TABLE_NAME: 'stock',
+        STOCKS_TABLE_NAME: 'stocks',
         SQS_URL: catalogItemsQueue.queueUrl,
       },
     });
@@ -58,6 +58,15 @@ export class ProductServiceStack extends cdk.Stack {
 
     catalogBatchProcessLambda.addEventSource(new eventSources.SqsEventSource(catalogItemsQueue, {
       batchSize: 5,
-    }));    
+    }));
+
+
+    new cdk.CfnOutput(this, 'QueueArn', {
+      value: `Queue: ${catalogItemsQueue.queueName} arn: ${catalogItemsQueue.queueArn}`,
+    });    
+    
+    new cdk.CfnOutput(this, 'SNSArn', {
+      value: `SNS name: ${createProductTopic.topicName} arn: ${createProductTopic.topicArn}`,
+    });
   }
 }
