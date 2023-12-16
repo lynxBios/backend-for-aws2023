@@ -15,6 +15,7 @@ export const saveItem = async (data: any) => {
         TableName: 'products',
         Item: {
           productId,
+          id: productId,
           description,
           price,
           title,
@@ -56,14 +57,15 @@ export const sendEmail = async (products: any) => {
   const paramsSNS= {
     Message: `New objects uploaded: ${JSON.stringify(products)}`,
     Subject: 'Subject',
-    TopicArn: `arn:aws:sns:${region}:${accountId}:${topicName}`,
+    TopicArn: 'arn:aws:sns:eu-central-1:730043614514:ProductsServiceStack-CreateProductTopicE4CD9217-7YNo7nUhvlJ9',
     MessageAttributes: {
-      totalCost: {
+      totalCount: {
         StringValue: totalCount.toString(),
         DataType: 'Number',        
       }
     }
   }
+  console.log('paramsSNS', paramsSNS);
 
   try {
     await snsClient.publish(paramsSNS);
@@ -73,8 +75,9 @@ export const sendEmail = async (products: any) => {
   }
 }
 
-export const catalogBatchProcess = async (event: any = {}) => {
-  const records = event.Records;  
+export const handler = async (event: any = {}) => {
+  //console.log(JSON.stringify(event));
+  const records = event.Records;
   if (!records) {
     console.log('Records not found');
   }

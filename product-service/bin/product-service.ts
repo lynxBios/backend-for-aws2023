@@ -90,6 +90,7 @@ const catalogItemsQueue = new sqs.Queue(stack, 'catalogItemsQueue', {
 
 const catalogBatchProcessLambda = new NodejsFunction(stack, 'catalogBatchProcessLambda', {
   runtime: lambda.Runtime.NODEJS_18_X,
+  //handler: 'catalogBatchProcess',
   entry: './src/lambdas/catalogBatchProcess.ts',
   functionName: 'catalogBatchProcess',
   role: lambdaRole,      
