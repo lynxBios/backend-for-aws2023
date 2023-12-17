@@ -1,4 +1,3 @@
-import { S3Client } from '@aws-sdk/client-s3';
 import { S3Event } from "aws-lambda";
 import { Readable } from "stream";
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
@@ -6,7 +5,12 @@ import {
   GetObjectCommand,
   CopyObjectCommand,
   DeleteObjectCommand,
+  S3Client,
 } from "@aws-sdk/client-s3";
+import { config } from "dotenv";
+import { buildResponse } from "../utils/response";
+
+config();
 
 import csv = require("csv-parser");
 
@@ -35,7 +39,7 @@ const move = async ({ bucket, from, to, }: {
 
 export const handler = async (event: S3Event) => {
   try {
-    console.log("importFileParser", JSON.stringify(event));
+    console.log("importFileParser lambda", JSON.stringify(event));
 
     const bucket = event.Records[0].s3.bucket.name;
     const fileName = decodeURIComponent(
@@ -52,22 +56,26 @@ export const handler = async (event: S3Event) => {
     await new Promise<void>((resolve, reject) => {
       (stream as Readable)
         .pipe(csv())
-        .on('data', async (data: any) => {
+        .on('data', async (data: object) => {
+          console.log("Data from parser:", data);
           await sqsClient.send(
             new SendMessageCommand({
-              QueueUrl: process.env.QUEUE_URL,
+              //QueueUrl: process.env.QUEUE_URL,
+              QueueUrl: 'https://sqs.eu-central-1.amazonaws.com/730043614514/catalogItemsQueue',
               MessageBody: JSON.stringify(data),
-            })
+            })            
           );
+          console.log("Message sent to SQS", data);
         })
         
         .on("end", async () => {
+          console
           await move({
             from: fileName,
             to: fileName.replace("uploaded/", "parsed/"),
             bucket,
           });
-          console.log("file moved");
+          console.log("File moved");
           resolve();
         })
 
@@ -75,8 +83,8 @@ export const handler = async (event: S3Event) => {
           reject(error);
         });
     });
-    console.log("parsing succeed");
+    console.log("Parsing succeed");
   } catch (err: any) {
-    console.log("parsing error", err);
+    console.log("Parsing error", err);
   }
 };
