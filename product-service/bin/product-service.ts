@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-//import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apiGateway from '@aws-cdk/aws-apigatewayv2-alpha';
-//import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as eventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 
 const BASE_URL = 'products';
@@ -27,18 +30,6 @@ const createLambda = (name: string, props: NodejsFunctionProps ) => new NodejsFu
   ...props,  
 });
 
-// const productsTable = dynamodb.Table.fromTableName(
-//   stack,
-//   "ProductsTable",
-//   process.env.PRODUCTS_TABLE_NAME as string
-// );
-
-// const stocksTable = dynamodb.Table.fromTableName(
-//   stack,
-//   "StocksTable",
-//   process.env.STOCKS_TABLE_NAME as string
-// );
-
 const getProductsList = createLambda('GetProductsListLambda', {
   entry: 'src/lambdas/getProductsList.ts',
   functionName: 'getProductsList',
@@ -57,23 +48,10 @@ const createProduct = createLambda('CreateProductLambda', {
 const api = new apiGateway.HttpApi(stack, 'ProductsApiGateway', {
   corsPreflight: {
     allowHeaders: ['*'],
-    allowMethods: [apiGateway.CorsHttpMethod.ANY],
-    //allowMethods: apiGateway.Cors.ALL_METHODS,
+    allowMethods: [apiGateway.CorsHttpMethod.ANY],    
     allowOrigins: ['*'],
   },
 });
-
-// const grants = [
-//   productsTable.grantReadData(getProductsList),
-//   stocksTable.grantReadData(getProductsList),
-
-//   productsTable.grantReadData(getProductsById),
-//   stocksTable.grantReadData(getProductsById),
-
-//   productsTable.grantWriteData(createProduct),
-//   stocksTable.grantWriteData(createProduct),
-// ];
-// grants.forEach((grant) => grant.assertSuccess());
 
 api.addRoutes({
   path: `/${BASE_URL}`,
@@ -95,4 +73,63 @@ api.addRoutes({
 
 new cdk.CfnOutput(stack, 'ApiGatewayUrl', {
   value: api.url || '',
+});
+
+
+const lambdaRole = new iam.Role(stack, 'LambdaRole', {
+  assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+});
+
+lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSQSFullAccess'));
+lambdaRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'));
+
+const catalogItemsQueue = new sqs.Queue(stack, 'catalogItemsQueue', {
+  queueName: "catalogItemsQueue",
+  visibilityTimeout: cdk.Duration.seconds(40),
+});
+
+const catalogBatchProcessLambda = new NodejsFunction(stack, 'catalogBatchProcessLambda', {
+  runtime: lambda.Runtime.NODEJS_18_X,
+  //handler: 'catalogBatchProcess',
+  entry: './src/lambdas/catalogBatchProcess.ts',
+  functionName: 'catalogBatchProcess',
+  role: lambdaRole,      
+  environment: {
+    CREATE_PRODUCT_TOPIC_ARN: 'arn:aws:sns:eu-central-1:730043614514:create-product-topic',
+    REGION: 'eu-central-1',
+    PRODUCTS_TABLE_NAME: 'products',
+    STOCKS_TABLE_NAME: 'stocks',
+    SQS_URL: catalogItemsQueue.queueUrl,
+  },
+});
+
+const createProductTopic = new sns.Topic(stack, 'CreateProductTopic', {
+  displayName: 'Create Product Topic',
+});
+
+createProductTopic.addSubscription(new subs.EmailSubscription('stv20595@gmail.com', {
+  filterPolicy: {
+    totalCount: sns.SubscriptionFilter.numericFilter({ greaterThan: 10 }),
+  },
+}));
+
+createProductTopic.addSubscription(new subs.EmailSubscription('lregvjlke@gmail.com', {
+  filterPolicy: {
+    totalCount: sns.SubscriptionFilter.numericFilter({ lessThanOrEqualTo: 10 }),
+  },
+}));
+
+createProductTopic.grantPublish(catalogBatchProcessLambda);
+
+catalogBatchProcessLambda.addEventSource(new eventSources.SqsEventSource(catalogItemsQueue, {
+  batchSize: 5,
+}));
+
+
+new cdk.CfnOutput(stack, 'QueueArn', {
+  value: `Queue: ${catalogItemsQueue.queueName} arn: ${catalogItemsQueue.queueArn}`,
+});    
+
+new cdk.CfnOutput(stack, 'SNSArn', {
+  value: `SNS name: ${createProductTopic.topicName} arn: ${createProductTopic.topicArn}`,
 });

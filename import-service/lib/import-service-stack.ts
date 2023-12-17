@@ -3,6 +3,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as apiGateway from '@aws-cdk/aws-apigatewayv2-alpha';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -11,23 +12,27 @@ export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const itemsQueue = sqs.Queue.fromQueueArn(this, "catalogItemsQueue",
+      `arn:aws:sqs:${this.region}:${this.account}:catalogItemsQueue`
+    );
+
     const importProductsFileLambda = new NodejsFunction(this, 'importProductsFileLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: './src/lambdas/importProductsFile.ts',
-      handler: 'importProductsFile',
+      functionName: 'importProductsFile',      
       environment: {
         BUCKET_NAME: 'bucket-for-task5',
         REGION: 'eu-central-1',
       },
     });
-
+    
     const importFileParserLambda = new NodejsFunction(this, 'importFileParserLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: './src/lambdas/importFileParser.ts',
-      handler: 'importFileParser',
+      entry: './src/lambdas/importFileParser.ts',      
       environment: {
         BUCKET_NAME: 'bucket-for-task5',
         REGION: 'eu-central-1',
+        SQS_URL: itemsQueue.queueUrl,
       },
     });
 
@@ -63,6 +68,7 @@ export class ImportServiceStack extends cdk.Stack {
     bucket.grantReadWrite(importProductsFileLambda);
     bucket.grantReadWrite(importFileParserLambda);
     bucket.grantDelete(importFileParserLambda);
+    itemsQueue.grantSendMessages(importFileParserLambda);
 
     const BASE_URL = 'import';
     const API_PATH = `/${BASE_URL}`;
