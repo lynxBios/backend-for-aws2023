@@ -41,7 +41,9 @@ export const saveItem = async (data: any) => {
 }
 
 export const calculateTotalCount = (products: {count: number}[]) => {
+  
   return products.reduce((totalCount, product) => totalCount + product.count, 0);
+  
 }
 
 export const sendEmail = async (products: any) => {
@@ -52,6 +54,7 @@ export const sendEmail = async (products: any) => {
   } = process.env;
 
   const totalCount = calculateTotalCount(products);
+  console.log(`Total count: ${totalCount}`);
 
   const snsClient = new SNS();
   const paramsSNS= {
@@ -65,7 +68,7 @@ export const sendEmail = async (products: any) => {
       }
     }
   }
-  console.log('paramsSNS', paramsSNS);
+  //console.log('paramsSNS', paramsSNS);
 
   try {
     await snsClient.publish(paramsSNS);

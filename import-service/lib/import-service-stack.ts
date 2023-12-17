@@ -28,7 +28,8 @@ export class ImportServiceStack extends cdk.Stack {
     
     const importFileParserLambda = new NodejsFunction(this, 'importFileParserLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: './src/lambdas/importFileParser.ts',      
+      entry: './src/lambdas/importFileParser.ts',
+      functionName: 'importFileParser',            
       environment: {
         BUCKET_NAME: 'bucket-for-task5',
         REGION: 'eu-central-1',
