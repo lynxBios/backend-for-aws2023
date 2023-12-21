@@ -26,6 +26,11 @@ export class AuthorizationServiceStack extends cdk.Stack {
     basicAuthorizerLambda.grantInvoke({
       grantPrincipal: new ServicePrincipal("apigateway.amazonaws.com"),
     });
+
+    new cdk.CfnOutput(this, "basicAuthorizerArn", {
+      value: basicAuthorizerLambda.functionArn,
+      exportName: 'AuthorizationServiceAuthorizerArn',
+    });
     
   }
 }
