@@ -7,10 +7,27 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { HttpLambdaAuthorizer, HttpLambdaResponseType, } from '@aws-cdk/aws-apigatewayv2-authorizers-alpha';
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const authorizationARN = cdk.Fn.importValue(process.env.AUTHORIZATION_LAMBDA_NAME as string);
+    
+    const authorizationLambda = lambda.Function.fromFunctionArn(this, 'authorizationLambda', authorizationARN);    
+    
+    const authorizer = new HttpLambdaAuthorizer('Authorizer', authorizationLambda, {
+      responseTypes: [HttpLambdaResponseType.IAM],
+      resultsCacheTtl: cdk.Duration.seconds(0),
+    });
+    
+    new lambda.CfnPermission(this, 'BasicAuthorizerPermission', {
+      action: 'lambda:InvokeFunction',
+      functionName: authorizationLambda.functionName,
+      principal: 'apigateway.amazonaws.com',
+      sourceAccount: this.account,
+    });
 
     const itemsQueue = sqs.Queue.fromQueueArn(this, "catalogItemsQueue",
       `arn:aws:sqs:${this.region}:${this.account}:catalogItemsQueue`
@@ -89,10 +106,12 @@ export class ImportServiceStack extends cdk.Stack {
         'ImportProductsFileLambdaIntegration',
         importProductsFileLambda
       ),
+      authorizer,
     });
 
     new cdk.CfnOutput(this, 'ApiImportUrl', {
       value: `${api.url}${BASE_URL}`,
+      description: `Import service API URL`,
     });
   }
 }
