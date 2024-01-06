@@ -13,6 +13,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Lambda  that is triggered by API Gateway when some client tries to get protected resource
     const basicAuthorizerLambda = new NodejsFunction(this, 'basicAuthorizerLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: './src/lambdas/basicAuthorizer.ts',

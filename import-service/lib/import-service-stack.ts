@@ -13,6 +13,7 @@ export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // import lambda from authorization-service
     const authorizationARN = cdk.Fn.importValue(process.env.AUTHORIZATION_LAMBDA_NAME as string);
     
     const authorizationLambda = lambda.Function.fromFunctionArn(this, 'authorizationLambda', authorizationARN);    
