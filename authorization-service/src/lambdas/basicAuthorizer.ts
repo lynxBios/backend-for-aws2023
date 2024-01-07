@@ -1,19 +1,10 @@
 import { APIGatewayTokenAuthorizerEvent, APIGatewayAuthorizerResult } from 'aws-lambda';
-import * as base64 from 'base-64';
-import { config } from 'dotenv';
-
-config();
-
-// export const headers = {
-//   "Access-Control-Allow-Credentials": true,
-//   "Access-Control-Allow-Origin": "*",
-//   "Access-Control-Allow-Headers": "*",
-// };
+import "dotenv/config";
 
 export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
   try {
     console.log('BasicAuthorizer:', JSON.stringify(event));
-    
+
     const token = event.authorizationToken;
 
     if (!token) {
@@ -41,8 +32,9 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
       };
     };
     const authType = event.authorizationToken.split(' ')[0];
-    const encodedToken = event.authorizationToken.split(' ')[1];  
-    
+    const encodedToken = event.authorizationToken.split(' ')[1];
+
+
     if (authType !== 'Basic' || !encodedToken) {
       return generatePolicy(token, 'Deny', event.methodArn);
     }
@@ -53,8 +45,7 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
 
     const storedPassword = process.env[username.toLowerCase()];
 
-    const effect =
-      storedPassword && storedPassword === password ? 'Allow' : 'Deny';
+    const effect = storedPassword && storedPassword === password ? 'Allow' : 'Deny';
 
     const policy = generatePolicy(token, effect, event.methodArn);
     return policy;
