@@ -8,12 +8,20 @@ import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-al
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { HttpLambdaAuthorizer, HttpLambdaResponseType, } from '@aws-cdk/aws-apigatewayv2-authorizers-alpha';
+import "dotenv/config";
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const authorizationARN = cdk.Fn.importValue(process.env.AUTHORIZATION_LAMBDA_NAME as string);
+    const lambdaName = process.env.AUTHORIZATION_LAMBDA_NAME;
+    if (!lambdaName) {
+      throw new Error("Lambda name not defined!");
+    }
+
+    // import lambda from authorization-service
+    const authorizationARN = cdk.Fn.importValue(lambdaName);
+    console.log(authorizationARN);
     
     const authorizationLambda = lambda.Function.fromFunctionArn(this, 'authorizationLambda', authorizationARN);    
     

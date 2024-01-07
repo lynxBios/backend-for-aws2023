@@ -4,82 +4,63 @@ import { config } from 'dotenv';
 
 config();
 
-export const headers = {
-  "Access-Control-Allow-Credentials": true,
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "*",
-};
+// export const headers = {
+//   "Access-Control-Allow-Credentials": true,
+//   "Access-Control-Allow-Origin": "*",
+//   "Access-Control-Allow-Headers": "*",
+// };
 
 export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
   try {
-    const credEnvaironmentVariable = process.env.GITHUB_CREDENTIALS ?? '';
+    console.log('BasicAuthorizer:', JSON.stringify(event));
+    
+    const token = event.authorizationToken;
 
-    const [username, password] = credEnvaironmentVariable.split(':');
-
-    if (!event.authorizationToken) {
-      return {
-        principalId: 'user',
-        policyDocument: {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Action: 'execute-api:Invoke',
-              Effect: 'Deny',
-              Resource: event.methodArn,
-            },
-          ],
-        },
-      };
+    if (!token) {
+      console.log('No Authorization header provided');
+      throw new Error('Unauthorized');
     }
 
-    const [, token] = event.authorizationToken.split(' ');
-    const decodedToken = base64.decode(token);
-
-    const [providedUsername, providedPassword] = decodedToken.split(':');
-
-    if (providedUsername === username && providedPassword === password) {
+    const generatePolicy = (
+      principalId: string,
+      effect: 'Allow' | 'Deny',
+      resource: string
+    ): APIGatewayAuthorizerResult => {
       return {
-        principalId: 'user',
+        principalId,
         policyDocument: {
           Version: '2012-10-17',
           Statement: [
             {
               Action: 'execute-api:Invoke',
-              Effect: 'Allow',
-              Resource: event.methodArn,
+              Effect: effect,
+              Resource: resource,
             },
           ],
         },
       };
-    } else {
-      return {
-        principalId: 'user',
-        policyDocument: {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Action: 'execute-api:Invoke',
-              Effect: 'Deny',
-              Resource: event.methodArn,
-            },
-          ],
-        },
-      };
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    return {
-      principalId: 'user',
-      policyDocument: {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Action: 'execute-api:Invoke',
-            Effect: 'Deny',
-            Resource: event.methodArn,
-          },
-        ],
-      },
     };
+    const authType = event.authorizationToken.split(' ')[0];
+    const encodedToken = event.authorizationToken.split(' ')[1];  
+    
+    if (authType !== 'Basic' || !encodedToken) {
+      return generatePolicy(token, 'Deny', event.methodArn);
+    }
+
+    const [username, password] = Buffer.from(encodedToken, 'base64')
+      .toString('utf8')
+      .split(':');
+
+    const storedPassword = process.env[username.toLowerCase()];
+
+    const effect =
+      storedPassword && storedPassword === password ? 'Allow' : 'Deny';
+
+    const policy = generatePolicy(token, effect, event.methodArn);
+    return policy;
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('An error occurred:', error.message);
+    throw new Error('Unauthorized');
   }
 };
